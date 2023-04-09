@@ -1,9 +1,22 @@
 import { z } from 'zod';
+import { knex } from '../db';
 import { randomUUID } from 'node:crypto';
 import { FastifyInstance } from 'fastify';
 
 export const usersRoutes = async (app: FastifyInstance) => {
+  app.get('/', async () => {
+    const users = await knex('users').select('*');
+
+    return users;
+  })
+
   app.post('/', async (req, res) => {
+    let { sessionId } = req.cookies;
+
+    if (sessionId) {
+      res.status(403).send({ error: 'Cannot create a new user because you are already authenticated'})
+      return;
+    }
 
     const createUserBodySchema = z.object({
       name: z.string(),
@@ -22,24 +35,23 @@ export const usersRoutes = async (app: FastifyInstance) => {
       
       return;
     }
-    
-    let sessionId = req.cookies.sessionId;
 
-    if (!sessionId) {
-      sessionId = randomUUID();
+    sessionId = randomUUID();
 
-      res.cookie('sessionId', sessionId, {
+    const [user] = await knex('users')
+      .insert({
+        id: randomUUID(),
+        session_id: sessionId,
+        name: parsedReq.data.name
+      })
+      .returning('*');
+
+    res
+      .status(201)
+      .cookie('sessionId', sessionId, {
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-      });
-    }
-
-    const user = {
-      id: randomUUID(),
-      sessionId,
-      ...parsedReq.data
-    }
-
-    res.status(201).send({ user });
+      })
+      .send({ user });
   });
 }
