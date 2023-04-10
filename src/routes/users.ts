@@ -2,14 +2,9 @@ import { z } from 'zod';
 import { knex } from '../db';
 import { randomUUID } from 'node:crypto';
 import { FastifyInstance } from 'fastify';
+import { sendMissingFieldsMessage } from '../helpers/send-missing-fields-message';
 
 export const usersRoutes = async (app: FastifyInstance) => {
-  app.get('/', async () => {
-    const users = await knex('users').select('*');
-
-    return users;
-  })
-
   app.post('/', async (req, res) => {
     let { sessionId } = req.cookies;
 
@@ -31,8 +26,7 @@ export const usersRoutes = async (app: FastifyInstance) => {
                                            .fieldErrors
                                           );
 
-      res.status(400).send({ error: `Is missing the fallowing fields: ${missingFieldsArr}`});
-      
+      sendMissingFieldsMessage(missingFieldsArr, res);
       return;
     }
 
