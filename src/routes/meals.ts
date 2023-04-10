@@ -82,6 +82,38 @@ export const mealsRoutes = async (app: FastifyInstance) => {
       .send({ meal });
   });
 
+  app.put('/:id', async (req, res) => {
+    const pathParamsSchema = z.object({
+      id: z.string().uuid()
+    });
+
+    const parsedPathParams = pathParamsSchema.safeParse(req.params);
+
+    if (!parsedPathParams.success) {
+      res.status(400).send({ error: 'Invalid ID' });
+      return;
+    }
+
+    const mealUpdateBodySchema = z.object({
+      name: z.string(),
+      description: z.string(),
+      isUnderDiet: z.boolean()
+    });
+
+    const parsedBody = mealUpdateBodySchema.parse(req.body);
+
+    const [meal] = await knex('meals')
+      .where('id', parsedPathParams.data.id)
+      .update({
+        name: parsedBody.name,
+        description: parsedBody.description,
+        is_under_diet: parsedBody.isUnderDiet
+      })
+      .returning('*');
+
+    res.status(200).send({ meal });
+  });
+
   app.delete('/:id', async (req, res) => {
     const pathParamsSchema = z.object({
       id: z.string().uuid()
