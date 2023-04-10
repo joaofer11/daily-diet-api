@@ -2,9 +2,26 @@ import { z } from 'zod';
 import { knex } from '../db';
 import { randomUUID } from 'node:crypto';
 import { FastifyInstance } from 'fastify';
+import { checkSessionIdExists } from '../middlewares/check-session-id-exists';
 import { sendMissingFieldsMessage } from '../helpers/send-missing-fields-message';
 
 export const mealsRoutes = async (app: FastifyInstance) => {
+  app.get(
+    '/',
+    {
+      preHandler: [checkSessionIdExists]
+    },
+    async (req) => {
+      const { sessionId } = req.cookies;
+
+      const meals = await knex('meals')
+        .where('session_id', sessionId)
+        .select('*');
+
+      return { meals }
+    }
+  );
+
   app.post('/', async (req, res) => {
     const createMealBodySchema = z.object({
       name: z.string(),
