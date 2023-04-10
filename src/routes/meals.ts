@@ -41,6 +41,35 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     return { meal }
   });
 
+  app.get(
+    '/metrics',
+    {
+      preHandler: [checkSessionIdExists]
+    },
+    async (req, res) => {
+      const { sessionId } = req.cookies;
+
+      const meals = await knex('meals')
+        .where('session_id', sessionId)
+        .select('is_under_diet');
+
+      
+      const metrics = meals.reduce((acc, meal) => {
+        acc.mealsInsideOfDiet += meal.is_under_diet;
+        acc.mealsOutsideOfDiet -= meal.is_under_diet - 1;
+        acc.bestSequenceOfMealsInsideOfDiet = +(acc.mealsInsideOfDiet / acc.maxMealsAmount * 100).toFixed(2);
+
+        return acc;
+      }, {
+        maxMealsAmount: meals.length,
+        mealsInsideOfDiet: 0,
+        mealsOutsideOfDiet: 0,
+        bestSequenceOfMealsInsideOfDiet: 0,
+      });
+      
+      return { metrics };
+    });
+
   app.post('/', async (req, res) => {
     const createMealBodySchema = z.object({
       name: z.string(),
