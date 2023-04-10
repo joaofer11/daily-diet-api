@@ -6,13 +6,6 @@ import { sendMissingFieldsMessage } from '../helpers/send-missing-fields-message
 
 export const usersRoutes = async (app: FastifyInstance) => {
   app.post('/', async (req, res) => {
-    let { sessionId } = req.cookies;
-
-    if (sessionId) {
-      res.status(403).send({ error: 'Cannot create a new user because you are already authenticated'})
-      return;
-    }
-
     const createUserBodySchema = z.object({
       name: z.string(),
     });
@@ -30,7 +23,7 @@ export const usersRoutes = async (app: FastifyInstance) => {
       return;
     }
 
-    sessionId = randomUUID();
+    const sessionId = req.cookies.sessionId ?? randomUUID();
 
     const [user] = await knex('users')
       .insert({
