@@ -1,0 +1,48 @@
+import { z } from 'zod';
+import { knex } from '../db';
+import { randomUUID } from 'node:crypto';
+import { FastifyInstance } from 'fastify';
+import { sendMissingFieldsMessage } from '../helpers/send-missing-fields-message';
+
+export const mealsRoutes = async (app: FastifyInstance) => {
+  app.post('/', async (req, res) => {
+    const createMealBodySchema = z.object({
+      name: z.string(),
+      description: z.string(),
+      isUnderDiet: z.boolean()
+    });
+
+    const parsedReq = createMealBodySchema.safeParse(req.body);
+
+    if (!parsedReq.success) {
+      const missingFieldsArr = Object.keys(parsedReq
+                                           .error
+                                           .formErrors
+                                           .fieldErrors
+                                          );
+
+      sendMissingFieldsMessage(missingFieldsArr, res); 
+      return;
+    }
+
+    const sessionId = req.cookies.sessionId ?? randomUUID();
+    
+    const [meal] = await knex('meals')
+      .insert({
+        id: randomUUID(),
+        session_id: sessionId,
+        name: parsedReq.data.name,
+        description: parsedReq.data.description,
+        is_under_diet: parsedReq.data.isUnderDiet
+      })
+      .returning('*');
+
+    res
+      .status(201)
+      .cookie('sessionId', sessionId, {
+        path: '/',
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+      })
+      .send({ meal });
+  });
+}
