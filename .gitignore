@@ -1,5 +1,8 @@
 node_modules
-db/app.ts
+
+db/app.db
+db/test.db
 
 .env
+.env.test
 .cookies.txt

@@ -1,11 +1,25 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { execSync } from 'node:child_process';
+
+import {
+  it,
+  expect,
+  describe,
+  afterAll,
+  beforeAll,
+  beforeEach,
+} from 'vitest';
 
 describe('Meals Routes', () => {
   beforeAll(async () => await app.ready());
 
   afterAll(async () => app.close());
+
+  beforeEach(() => {
+    execSync('npm run knex -- migrate:rollback --all');
+    execSync('npm run knex -- migrate:latest');
+  });
 
   it('should be able to list all meals', async () => {
     const createMealRes = await request(app.server)
